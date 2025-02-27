@@ -6,13 +6,23 @@
 
 
 from google import genai
-from dotenv import load_dotenv
+from dotenv import load_dotenv, find_dotenv
+import os
+
+dotenv_path = find_dotenv()
+if dotenv_path:
+    print(f"Loading .env from: {dotenv_path}")
+else:
+    print("No .env file found!")
 
 # Load environment variables from .env file
 load_dotenv()
+api_key = os.getenv("GOOGLE_API_KEY")
+print("API:", api_key)
 
-client = genai.Client(api_key= "GOOGLE_API_KEY")
-response = client.models.generate_content(
-    model="gemini-2.0-flash", contents="Explain how AI works"
-)
-print(response.text)
+
+# client = genai.Client(api_key= "GOOGLE_API_KEY")
+# response = client.models.generate_content(
+#     model="gemini-2.0-flash", contents="Explain how AI works"
+# )
+# print(response.text)
