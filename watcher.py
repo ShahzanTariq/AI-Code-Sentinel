@@ -4,18 +4,29 @@ import sys
 import os
 from watchdog.observers import Observer
 from watchdog.events import FileSystemEventHandler
+from google import genai
+from dotenv import load_dotenv
 
+load_dotenv()
+api = os.getenv("GOOGLE_API_KEY")
+client = genai.Client(api_key = api)
 
 class ScriptChangeHandler(FileSystemEventHandler):
     def __init__(self, script_path, *args):
         self.script_path = script_path
         self.script_args = args
+        self.last_triggered = 0
+        self.debounce_interval = 1
 
     def on_modified(self, event):
-        if event.src_path == self.script_path:  # Only trigger if the target script is modified.
-            print(f"Detected change in {self.script_path}. Re-running script...")
-            error_code, stdout, stderr = run_script_and_capture_error(self.script_path, *self.script_args)  # Assuming you have the error_capture function from before.
-            process_output(error_code, stdout, stderr) # Process output as before
+        if event.src_path == self.script_path:
+            current_time = time.time()
+            if current_time - self.last_triggered > self.debounce_interval:
+                self.last_triggered = current_time
+                print(f"Detected change in {self.script_path}. Re-running script...")
+                error_code, stdout, stderr = run_script_and_capture_error(self.script_path, *self.script_args)
+                process_output(error_code, stdout, stderr)
+                
 
 
 def run_script_and_capture_error(script_path, *args): # Same as before
@@ -52,12 +63,21 @@ def process_output(error_code, stdout, stderr): # Function to handle output (exa
         print(f"Error Code: {error_code}")
         print("Script Error (stderr):")
         print(stderr)
+        solution = ai_help(stderr) 
+        print(solution.text)
     else:
         print("Script executed successfully.")
 
+def ai_help(stderr):
+    error = stderr
+    print("\nThe helper is thinking...\n")
+    response = client.models.generate_content(
+    model="gemini-2.0-flash-lite", contents=f"I encountered the following error while running my Python script: {error} \n Figure out what is solution and what caused the problem. Keep it concise."
+    )
+    return response
 
 if __name__ == "__main__":
-    print("it is working??")
+    print("Watcher is currently running:\n")
     if len(sys.argv) < 2:
         print("Usage: python watch_and_run.py <script_path> [<arg1> <arg2> ...]")
         sys.exit(1)

@@ -19,5 +19,4 @@ client = genai.Client(api_key = api)
 response = client.models.generate_content(
     model="gemini-2.0-flash-lite", contents="Explain how AI works" #Input error code and ask how to solve it
 )
-prints(response.text)
-
+print(response.text)
