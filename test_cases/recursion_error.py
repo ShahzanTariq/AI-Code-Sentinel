@@ -1,0 +1,4 @@
+def recursive():
+    recursive()
+
+recursive()
