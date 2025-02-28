@@ -6,10 +6,9 @@ from watchdog.observers import Observer
 from watchdog.events import FileSystemEventHandler
 from google import genai
 from dotenv import load_dotenv
+import re
 
-from PySide6.QtWidgets import (QApplication, QWidget, QVBoxLayout, 
-                               QPushButton, QLabel, QLineEdit, 
-                               QFileDialog, QPlainTextEdit)
+from PySide6.QtWidgets import QApplication, QWidget, QVBoxLayout, QPushButton, QHBoxLayout, QLabel, QLineEdit, QFileDialog, QPlainTextEdit, QGroupBox
 from PySide6.QtCore import QThread, Signal
 
 load_dotenv()
@@ -17,7 +16,6 @@ api = os.getenv("GOOGLE_API_KEY")
 client = genai.Client(api_key=api)
 
 class ScriptChangeHandler(FileSystemEventHandler):
-    print("scirpchangehandler is being run")
     def __init__(self, script_path, *args):
         self.script_path = script_path
         self.script_args = args
@@ -25,18 +23,17 @@ class ScriptChangeHandler(FileSystemEventHandler):
         self.debounce_interval = 3
 
     def on_modified(self, event):
-        print("file has been modified")
         if os.path.normpath(event.src_path) == os.path.normpath(self.script_path):
             current_time = time.time()
             if current_time - self.last_triggered > self.debounce_interval:
                 self.last_triggered = current_time
                 print(f"Detected change in {self.script_path}. Re-running script...")
                 error_code, stdout, stderr = run_script_and_capture_error(self.script_path, *self.script_args)
-                process_output(error_code, stdout, stderr)
+                output = process_output(error_code, stdout, stderr)
+                self.output_signal.emit(output)  # Emit the output to the GUI
 
 
 def run_script_and_capture_error(script_path, *args):
-    print('the capture has started')
     try:
         process = subprocess.run(
             [sys.executable, script_path] + list(args),  # Use sys.executable to ensure the correct Python interpreter
@@ -52,16 +49,17 @@ def run_script_and_capture_error(script_path, *args):
     
 
 def process_output(error_code, stdout, stderr):
-    print("Script Output (stdout):")
-    print(stdout)
+    # output = "Script Output (stdout):\n"
+    # output += stdout + "\n"
     if error_code != 0:
-        print(f"Error Code: {error_code}")
-        print("Script Error (stderr):")
-        print(stderr)
-        solution = ai_help(stderr) 
-        print(solution.text)
+        # output += f"Error Code: {error_code}\n"
+        # output += "Script Error (stderr):\n"
+        # output += stderr + "\n"
+        solution = ai_help(stderr)
+        output = solution.text + "\n"
     else:
-        print("Script executed successfully.")
+        output = "Script executed successfully.\n"
+    return output
 
     
 
@@ -93,15 +91,14 @@ class WorkerThread(QThread):
 
     def run(self):
         event_handler = ScriptChangeHandler(self.script_path, *self.script_args)
+        event_handler.output_signal = self.output_signal  # Pass the signal to the event handler
         self.observer = Observer()
-        self.observer.schedule(event_handler, path=os.path.dirname(self.script_path), recursive=False)
-        self.observer.start()
+        self.observer.schedule(event_handler, path=os.path.dirname(self.script_path), recursive=False) #Observer is gonna check script_path for creation, deletion, modification, and moving. But our event_handler (scriptchangehandler) only handles modification events.
+        self.observer.start() # Starts observing
 
         try:
-            while True:  # Keep the thread running
-                time.sleep(1)
-        except KeyboardInterrupt:
-            pass  # Allow graceful stopping from the GUI
+            #This allows the thread to respond to events and to recieve signals
+            self.exec() #Starts Qt event loop for thread
         finally:
             if self.observer:
                 self.observer.stop()
@@ -117,6 +114,7 @@ class MainWindow(QWidget):
         self.worker_thread = None
 
         layout = QVBoxLayout()
+        plainText_layout = QHBoxLayout()
 
         self.file_path_label = QLabel("Selected File:")
         layout.addWidget(self.file_path_label)
@@ -129,19 +127,49 @@ class MainWindow(QWidget):
         browse_button.clicked.connect(self.browse_file)
         layout.addWidget(browse_button)
 
-        start_button = QPushButton("Start Watching")
-        start_button.clicked.connect(self.start_watching)
-        layout.addWidget(start_button)
+        self.watch_button = QPushButton("Start Watching")
+        self.watch_button.clicked.connect(self.toggle_watching)  # Connect to toggle function
+        layout.addWidget(self.watch_button)
+
+        # start_button = QPushButton("Start Watching")
+        # start_button.clicked.connect(self.start_watching)
+        # layout.addWidget(start_button)
 
 
-        stop_button = QPushButton("Stop Watching")
-        stop_button.clicked.connect(self.stop_watching)
-        layout.addWidget(stop_button)
+        # stop_button = QPushButton("Stop Watching")
+        # stop_button.clicked.connect(self.stop_watching)
+        # layout.addWidget(stop_button)
 
-        self.output_text = QPlainTextEdit(readOnly=True)
-        layout.addWidget(self.output_text)
+        
+        # Error Section (Vertical Layout)
+        error_layout = QVBoxLayout()
+        error_title = QLabel("Error:")
+        error_layout.addWidget(error_title)
+        self.error_text = QPlainTextEdit(readOnly=True)
+        error_layout.addWidget(self.error_text)
+        plainText_layout.addLayout(error_layout)  
 
+        # Cause Section (Vertical Layout)
+        cause_layout = QVBoxLayout()
+        cause_title = QLabel("Cause:")
+        cause_layout.addWidget(cause_title)
+        self.cause_text = QPlainTextEdit(readOnly=True)
+        cause_layout.addWidget(self.cause_text)
+        plainText_layout.addLayout(cause_layout)
+
+
+        # Solution Section (Vertical Layout)
+        solution_layout = QVBoxLayout()
+        solution_title = QLabel("Solution:")
+        solution_layout.addWidget(solution_title)
+        self.solution_text = QPlainTextEdit(readOnly=True)
+        solution_layout.addWidget(self.solution_text)
+        plainText_layout.addLayout(solution_layout)
+
+        
+        layout.addLayout(plainText_layout)
         self.setLayout(layout)
+
 
     def browse_file(self):
         file_path, _ = QFileDialog.getOpenFileName(self, "Select Script", "", "Python Files (*.py)")
@@ -149,40 +177,66 @@ class MainWindow(QWidget):
             self.file_path_edit.setText(file_path)
             self.file_path_label.setText(f"Selected File: {file_path}")
 
+    def toggle_watching(self):
+        if self.worker_thread is None or not self.worker_thread.isRunning():
+            self.start_watching() # Call existing start_watching function
+            
+        else:
+            self.stop_watching() # Call existing stop_watching function
+            
+
     def start_watching(self):
         script_path = self.file_path_edit.text()
 
         if not script_path:
-            self.output_text.appendPlainText("Please select a file first.")
+            self.error_text.appendPlainText("Please select a file first.")
             return
 
         if not os.path.exists(script_path):
-            self.output_text.appendPlainText(f"Error: {script_path} not found.")
+            self.error_text.appendPlainText(f"Error: {script_path} not found.")
             return
 
 
         if self.worker_thread is not None and self.worker_thread.isRunning():  # Prevent multiple starts
-            self.output_text.appendPlainText("Watcher is already running.")
+            self.error_text.appendPlainText("Watcher is already running.")
             return
 
+        
         self.worker_thread = WorkerThread(script_path, []) # No script arguments for now
+        self.worker_thread.output_signal.connect(self.append_output)  # Connect to append output to the GUI
         self.worker_thread.finished_signal.connect(self.worker_finished)  # Connect to cleanup
         self.worker_thread.start()
-        self.output_text.appendPlainText("Watcher started.")
+        self.error_text.setPlainText("Watcher started.")
+        self.watch_button.setText("Stop Watching")  # Change button text
 
+    # Set up to split texts into corresponding plaintext boxes (error, cause, solution)
+    def append_output(self, output):
+        #self.error_text.appendPlainText(output)
+        match = re.search(r"Error:\s*(.+?)\s*Cause:\s*(.+?)\s*Solution:\s*(.+)", output, re.DOTALL)
+
+        if match:
+            error = match.group(1).strip()
+            cause = match.group(2).strip()
+            solution = match.group(3).strip()
+        else:
+            return None  # Return None if the pattern is not found
+        self.error_text.setPlainText(error) #Using setPlaintext helps clean up the PlainText box in GUI
+        self.cause_text.setPlainText(cause)
+        self.solution_text.setPlainText(solution)
 
 
     def stop_watching(self):
         if self.worker_thread is not None and self.worker_thread.isRunning():
             self.worker_thread.terminate() # Forcefully stop the thread
             self.worker_thread = None  # Reset the thread object
-            self.output_text.appendPlainText("Watcher stopped.")
+            self.error_text.setPlainText("Watcher stopped.")
+            self.watch_button.setText("Start Watching")  # Change button text
         else:
-            self.output_text.appendPlainText("Watcher is not running.")
+            self.error_text.appendPlainText("Watcher is not running.")
 
 
     def worker_finished(self):
-        self.output_text.appendPlainText("Watcher thread finished.")
+        self.error_text.appendPlainText("Watcher thread finished.")
         self.worker_thread = None # Reset the thread object
 
 
