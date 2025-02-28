@@ -17,7 +17,7 @@ api = os.getenv("GOOGLE_API_KEY")
 
 client = genai.Client(api_key = api)
 response = client.models.generate_content(
-    model="gemini-2.0-flash-lite", contents="Explain how AI works"
+    model="gemini-2.0-flash-lite", contents="Explain how AI works" #Input error code and ask how to solve it
 )
-print(response.text)
+prints(response.text)
 
