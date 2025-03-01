@@ -23,12 +23,14 @@ class ScriptChangeHandler(FileSystemEventHandler):
         self.debounce_interval = 3
 
     def on_modified(self, event):
-        if os.path.normpath(event.src_path) == os.path.normpath(self.script_path):
+        if event.is_directory:
+            return None
+        if event.src_path.endswith(".py"):
             current_time = time.time()
             if current_time - self.last_triggered > self.debounce_interval:
                 self.last_triggered = current_time
-                print(f"Detected change in {self.script_path}. Re-running script...")
-                error_code, stdout, stderr = run_script_and_capture_error(self.script_path, *self.script_args)
+                print(f"Detected change in {event.src_path}. Re-running script...")
+                error_code, stdout, stderr = run_script_and_capture_error(event.src_path, *self.script_args)
                 output = process_output(error_code, stdout, stderr)
                 self.output_signal.emit(output)  # Emit the output to the GUI
 
@@ -94,7 +96,7 @@ class WorkerThread(QThread):
         event_handler = ScriptChangeHandler(self.script_path, *self.script_args)
         event_handler.output_signal = self.output_signal  # Pass the signal to the event handler
         self.observer = Observer()
-        self.observer.schedule(event_handler, path=os.path.dirname(self.script_path), recursive=False) #Observer is gonna check script_path for creation, deletion, modification, and moving. But our event_handler (scriptchangehandler) only handles modification events.
+        self.observer.schedule(event_handler, path=os.path.dirname(self.script_path), recursive=True) #Observer is gonna check script_path for creation, deletion, modification, and moving. But our event_handler (scriptchangehandler) only handles modification events.
         self.observer.start() # Starts observing
 
         try:
@@ -117,30 +119,20 @@ class MainWindow(QWidget):
         layout = QVBoxLayout()
         plainText_layout = QHBoxLayout()
 
-        self.file_path_label = QLabel("Selected File:")
-        layout.addWidget(self.file_path_label)
+        self.folder_path_label = QLabel("Selected File:")
+        layout.addWidget(self.folder_path_label)
 
 
-        self.file_path_edit = QLineEdit()
-        layout.addWidget(self.file_path_edit)
+        self.folder_path_edit = QLineEdit()
+        layout.addWidget(self.folder_path_edit)
 
-        browse_button = QPushButton("Browse")
-        browse_button.clicked.connect(self.browse_file)
-        layout.addWidget(browse_button)
+        self.browse_button = QPushButton("Browse")
+        self.browse_button.clicked.connect(self.browse_file)
+        layout.addWidget(self.browse_button)
 
         self.watch_button = QPushButton("Start Watching")
         self.watch_button.clicked.connect(self.toggle_watching)  # Connect to toggle function
         layout.addWidget(self.watch_button)
-
-        # start_button = QPushButton("Start Watching")
-        # start_button.clicked.connect(self.start_watching)
-        # layout.addWidget(start_button)
-
-
-        # stop_button = QPushButton("Stop Watching")
-        # stop_button.clicked.connect(self.stop_watching)
-        # layout.addWidget(stop_button)
-
         
         # Error Section (Vertical Layout)
         error_layout = QVBoxLayout()
@@ -173,10 +165,10 @@ class MainWindow(QWidget):
 
 
     def browse_file(self):
-        file_path, _ = QFileDialog.getOpenFileName(self, "Select Script", "", "Python Files (*.py)")
-        if file_path:
-            self.file_path_edit.setText(file_path)
-            self.file_path_label.setText(f"Selected File: {file_path}")
+        folder_path = QFileDialog.getExistingDirectory(self, "Select Folder", ".")
+        if folder_path:
+            self.folder_path_edit.setText(folder_path)
+            self.folder_path_label.setText(f"Selected Folder: {folder_path}")
 
     def toggle_watching(self):
         if self.worker_thread is None or not self.worker_thread.isRunning():
@@ -187,7 +179,7 @@ class MainWindow(QWidget):
             
 
     def start_watching(self):
-        script_path = self.file_path_edit.text()
+        script_path = self.folder_path_edit.text()
 
         if not script_path:
             self.error_text.appendPlainText("Please select a file first.")
@@ -208,6 +200,7 @@ class MainWindow(QWidget):
         self.worker_thread.finished_signal.connect(self.worker_finished)  # Connect to cleanup
         self.worker_thread.start()
         self.error_text.setPlainText("Watcher started.")
+        self.browse_button.setEnabled(False) #Stops user from changing folder while watcher is running
         self.watch_button.setText("Stop Watching")  # Change button text
 
     # Set up to split texts into corresponding plaintext boxes (error, cause, solution)
@@ -237,7 +230,9 @@ class MainWindow(QWidget):
             self.worker_thread.terminate() # Forcefully stop the thread
             self.worker_thread = None  # Reset the thread object
             self.error_text.setPlainText("Watcher stopped.")
+            self.worker_finished()
             self.watch_button.setText("Start Watching")  # Change button text
+            self.browse_button.setEnabled(True) # Allows user to browse folders again
         else:
             self.error_text.appendPlainText("Watcher is not running.")
 
