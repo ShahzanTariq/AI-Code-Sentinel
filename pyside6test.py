@@ -49,6 +49,7 @@ def run_script_and_capture_error(script_path, *args):
     
 
 def process_output(error_code, stdout, stderr):
+    print(error_code)
     # output = "Script Output (stdout):\n"
     # output += stdout + "\n"
     if error_code != 0:
@@ -58,7 +59,7 @@ def process_output(error_code, stdout, stderr):
         solution = ai_help(stderr)
         output = solution.text + "\n"
     else:
-        output = "Script executed successfully.\n"
+        output = "Script executed successfully."
     return output
 
     
@@ -212,6 +213,12 @@ class MainWindow(QWidget):
     # Set up to split texts into corresponding plaintext boxes (error, cause, solution)
     def append_output(self, output):
         #self.error_text.appendPlainText(output)
+        if output == "Script executed successfully.":
+            self.error_text.setPlainText(output) #Using setPlaintext helps clean up the PlainText box in GUI
+            self.cause_text.setPlainText("")
+            self.solution_text.setPlainText("")
+            return
+        
         match = re.search(r"Error:\s*(.+?)\s*Cause:\s*(.+?)\s*Solution:\s*(.+)", output, re.DOTALL)
 
         if match:
