@@ -27,7 +27,7 @@ class ScriptChangeHandler(FileSystemEventHandler):
                 print(f"Detected change in {event.src_path}. Re-running script...")
                 error_code, stdout, stderr = run_script_and_capture_error(event.src_path, *self.script_args)
                 output = process_output(error_code, stdout, stderr)
-                self.output_signal.emit(output)  # Emit the output to the GUI
+                self.output_signal.emit(output, stderr)  # Emit the output to the GUI
 
 
 def run_script_and_capture_error(script_path, *args):

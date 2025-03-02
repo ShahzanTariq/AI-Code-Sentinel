@@ -32,10 +32,15 @@ class MainWindow(QWidget):
         # Error Section (Vertical Layout)
         error_layout = QVBoxLayout()
         error_title = QLabel("Error:")
+        stderror_title = QLabel("Terminal Output:")
         error_layout.addWidget(error_title)
         self.error_text = QPlainTextEdit(readOnly=True)
         error_layout.addWidget(self.error_text)
+        error_layout.addWidget(stderror_title)
+        self.stderror_text = QPlainTextEdit(readOnly=True)
+        error_layout.addWidget(self.stderror_text)
         plainText_layout.addLayout(error_layout)  
+        
 
         # Cause Section (Vertical Layout)
         cause_layout = QVBoxLayout()
@@ -99,7 +104,7 @@ class MainWindow(QWidget):
         self.watch_button.setText("Stop Watching")  # Change button text
 
     # Set up to split texts into corresponding plaintext boxes (error, cause, solution)
-    def append_output(self, output):
+    def append_output(self, output, stderr):
         #self.error_text.appendPlainText(output)
         if output == "Script executed successfully.":
             self.error_text.setPlainText(output) #Using setPlaintext helps clean up the PlainText box in GUI
@@ -118,6 +123,7 @@ class MainWindow(QWidget):
         self.error_text.setPlainText(error) #Using setPlaintext helps clean up the PlainText box in GUI
         self.cause_text.setPlainText(cause)
         self.solution_text.setPlainText(solution)
+        self.stderror_text.setPlainText(stderr)
 
 
     def stop_watching(self):

@@ -10,7 +10,7 @@ from script_utils import ScriptChangeHandler
 
 
 class WorkerThread(QThread):
-    output_signal = Signal(str)
+    output_signal = Signal(str, str)
     finished_signal = Signal()
 
     def __init__(self, script_path, script_args):
