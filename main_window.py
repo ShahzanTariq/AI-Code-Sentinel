@@ -1,114 +1,9 @@
-import sys
+from PySide6.QtWidgets import QApplication, QWidget, QVBoxLayout, QPushButton, QHBoxLayout, QLabel, QLineEdit, QFileDialog, QPlainTextEdit
+from PySide6.QtCore import Signal
 import os
-import time
-import subprocess
-from watchdog.observers import Observer
-from watchdog.events import FileSystemEventHandler
-from google import genai
-from dotenv import load_dotenv
 import re
 
-from PySide6.QtWidgets import QApplication, QWidget, QVBoxLayout, QPushButton, QHBoxLayout, QLabel, QLineEdit, QFileDialog, QPlainTextEdit, QGroupBox
-from PySide6.QtCore import QThread, Signal
-
-load_dotenv()
-api = os.getenv("GOOGLE_API_KEY")
-client = genai.Client(api_key=api)
-
-class ScriptChangeHandler(FileSystemEventHandler):
-    def __init__(self, script_path, *args):
-        self.script_path = script_path
-        self.script_args = args
-        self.last_triggered = 0
-        self.debounce_interval = 3
-
-    def on_modified(self, event):
-        if event.is_directory:
-            return None
-        if event.src_path.endswith(".py"):
-            current_time = time.time()
-            if current_time - self.last_triggered > self.debounce_interval:
-                self.last_triggered = current_time
-                print(f"Detected change in {event.src_path}. Re-running script...")
-                error_code, stdout, stderr = run_script_and_capture_error(event.src_path, *self.script_args)
-                output = process_output(error_code, stdout, stderr)
-                self.output_signal.emit(output)  # Emit the output to the GUI
-
-
-def run_script_and_capture_error(script_path, *args):
-    try:
-        process = subprocess.run(
-            [sys.executable, script_path] + list(args),  # Use sys.executable to ensure the correct Python interpreter
-            capture_output=True,
-            text=True,  # Capture output as text
-            check=False  # Don't raise an exception on non-zero exit codes
-        )
-        return process.returncode, process.stdout, process.stderr
-    except FileNotFoundError:
-        return -1, "", f"Error: Script not found at '{script_path}'"
-    except Exception as e:
-        return -1, "", f"An unexpected error occurred: {e}"
-    
-
-def process_output(error_code, stdout, stderr):
-    print(error_code)
-    # output = "Script Output (stdout):\n"
-    # output += stdout + "\n"
-    if error_code != 0:
-        # output += f"Error Code: {error_code}\n"
-        # output += "Script Error (stderr):\n"
-        # output += stderr + "\n"
-        solution = ai_help(stderr)
-        output = solution.text + "\n"
-    else:
-        output = "Script executed successfully."
-    return output
-
-    
-
-def ai_help(stderr):
-    error = stderr
-    print("\nThe helper is thinking...\n")
-    response = client.models.generate_content(
-    model="gemini-2.0-flash-lite", contents=f"""I encountered the following error while running my Python script: {error} 
-    Figure out what the solution is and what caused the problem. Keep it concise. Provide the solution in code format with comments on every line to explain it.
-    The format should look similar to this:
-
-    Error: Explains the error
-    Cause: Shows why the error occurred
-    Solution: Shows how to fix the error
-    """
-    )
-    return response
-
-
-class WorkerThread(QThread):
-    output_signal = Signal(str)
-    finished_signal = Signal()
-
-    def __init__(self, script_path, script_args):
-        super().__init__()
-        self.script_path = script_path
-        self.script_args = script_args
-        self.observer = None
-
-    def run(self):
-        event_handler = ScriptChangeHandler(self.script_path, *self.script_args)
-        event_handler.output_signal = self.output_signal  # Pass the signal to the event handler
-        self.observer = Observer()
-        self.observer.schedule(event_handler, path=os.path.dirname(self.script_path), recursive=True) #Observer is gonna check script_path for creation, deletion, modification, and moving. But our event_handler (scriptchangehandler) only handles modification events.
-        self.observer.start() # Starts observing
-
-        try:
-            #This allows the thread to respond to events and to recieve signals
-            self.exec() #Starts Qt event loop for thread
-        finally:
-            if self.observer:
-                self.observer.stop()
-                self.observer.join()
-            self.finished_signal.emit()  # Signal thread completion
-
-
+from worker_thread import WorkerThread # Import WorkerThread
 
 class MainWindow(QWidget):
     def __init__(self):
@@ -240,10 +135,3 @@ class MainWindow(QWidget):
     def worker_finished(self):
         self.error_text.appendPlainText("Watcher thread finished.")
         self.worker_thread = None # Reset the thread object
-
-
-if __name__ == "__main__":
-    app = QApplication(sys.argv)
-    window = MainWindow()
-    window.show()
-    sys.exit(app.exec())
