@@ -14,7 +14,7 @@ class MainWindow(QWidget):
         layout = QVBoxLayout()
         plainText_layout = QHBoxLayout()
 
-        self.folder_path_label = QLabel("Selected File:")
+        self.folder_path_label = QLabel("Selected Folder:")
         layout.addWidget(self.folder_path_label)
 
 
