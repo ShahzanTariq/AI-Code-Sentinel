@@ -17,13 +17,27 @@ class MainWindow(QWidget):
         self.folder_path_label = QLabel("Selected Folder:")
         layout.addWidget(self.folder_path_label)
 
-
         self.folder_path_edit = QLineEdit()
         layout.addWidget(self.folder_path_edit)
 
+        self.mainFile_path_label = QLabel("Selected Main File:")
+        layout.addWidget(self.mainFile_path_label)
+
+        self.mainFile_path_edit = QLineEdit()
+        layout.addWidget(self.mainFile_path_edit)
+
+        # Browse button
+        fileSelection_layout = QHBoxLayout()
         self.browse_button = QPushButton("Browse")
+        fileSelection_layout.addWidget(self.browse_button)
         self.browse_button.clicked.connect(self.browse_file)
-        layout.addWidget(self.browse_button)
+
+        # Main File button
+        self.mainFile_button = QPushButton("Select Main File")
+        fileSelection_layout.addWidget(self.mainFile_button)
+        self.mainFile_button.clicked.connect(self.mainFile_select)
+        
+        layout.addLayout(fileSelection_layout)
 
         self.watch_button = QPushButton("Start Watching")
         self.watch_button.clicked.connect(self.toggle_watching)  # Connect to toggle function
@@ -68,7 +82,11 @@ class MainWindow(QWidget):
         folder_path = QFileDialog.getExistingDirectory(self, "Select Folder", ".")
         if folder_path:
             self.folder_path_edit.setText(folder_path)
-            self.folder_path_label.setText(f"Selected Folder: {folder_path}")
+
+    def mainFile_select(self):
+        file_path, _ = QFileDialog.getOpenFileName(self, "Select File", ".", "Python Files (*.py)") # Uses _ to hold second str
+        if file_path:
+            self.mainFile_path_edit.setText(file_path)
 
     def toggle_watching(self):
         if self.worker_thread is None or not self.worker_thread.isRunning():
@@ -80,6 +98,7 @@ class MainWindow(QWidget):
 
     def start_watching(self):
         script_path = self.folder_path_edit.text()
+        mainFile_path = self.mainFile_path_edit.text()
 
         if not script_path:
             self.error_text.appendPlainText("Please select a file first.")
@@ -95,7 +114,7 @@ class MainWindow(QWidget):
             return
 
         
-        self.worker_thread = WorkerThread(script_path, []) # No script arguments for now
+        self.worker_thread = WorkerThread(script_path, [], mainFile_path) # No script arguments for now
         self.worker_thread.output_signal.connect(self.append_output)  # Connect to append output to the GUI
         self.worker_thread.finished_signal.connect(self.worker_finished)  # Connect to cleanup
         self.worker_thread.start()
