@@ -8,7 +8,7 @@ from worker_thread import WorkerThread # Import WorkerThread
 class MainWindow(QWidget):
     def __init__(self):
         super().__init__()
-        self.setWindowTitle("Script Watcher")
+        self.setWindowTitle("AI Code Sentinel")
         self.worker_thread = None
 
         layout = QVBoxLayout()
