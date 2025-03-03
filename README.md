@@ -49,7 +49,3 @@ ai-debugger/
 │-- requirements.txt  # List of dependencies
 ```
 
-
-## Contact
-For any issues, feel free to open an issue or reach out at your_email@example.com.
-
