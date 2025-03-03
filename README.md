@@ -39,6 +39,30 @@ python main.py
 This will launch the GUI, where you can select a file to monitor and execute.
 ![image](https://github.com/user-attachments/assets/97155c0d-3df8-400b-a252-131eeac8c3ca)
 
+## Configuration
+### Adding Your API Key
+To use the AI-powered debugging features, you need to provide your Gemini API key.
+
+1. **Obtain Your API Key:**
+   - Sign up for an API key from [Google Studios](https://aistudio.google.com/apikey).
+   - Copy your API key once generated.
+
+2. **Add the API Key to the Project:**
+   - Create a `.env` file in the project root directory.
+   - Open `.env` and add the following line:
+     ```sh
+     GEMINI_API_KEY=your_api_key_here
+     ```
+   - Save the file.
+
+3. **Ensure the Project Loads the Key:**
+   - The script will automatically read from `.env` if properly configured.
+   - If needed, install `python-dotenv` by running:
+     ```sh
+     pip install python-dotenv
+     ```
+
+
 ## File Structure
 ```
 ai-debugger/
