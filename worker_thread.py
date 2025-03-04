@@ -13,14 +13,14 @@ class WorkerThread(QThread):
     output_signal = Signal(str, str)
     finished_signal = Signal()
 
-    def __init__(self, script_path, script_args):
+    def __init__(self, script_path, mainFile_path):
         super().__init__()
         self.script_path = script_path
-        self.script_args = script_args
+        self.mainFile_path = mainFile_path
         self.observer = None
 
     def run(self):
-        event_handler = ScriptChangeHandler(self.script_path, *self.script_args)
+        event_handler = ScriptChangeHandler(self.script_path, self.mainFile_path)
         event_handler.output_signal = self.output_signal  # Pass the signal to the event handler
         self.observer = Observer()
         self.observer.schedule(event_handler, path=os.path.dirname(self.script_path), recursive=True) #Observer is gonna check script_path for creation, deletion, modification, and moving. But our event_handler (scriptchangehandler) only handles modification events.
