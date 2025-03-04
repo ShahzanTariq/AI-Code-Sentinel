@@ -64,10 +64,13 @@ def process_output(error_code, stdout, stderr):
     
 
 def ai_help(stderr):
+    generation_config = {
+        "temperature": 0.6
+    }
     error = stderr
     print("\nThe helper is thinking...\n")
     response = client.models.generate_content(
-    model="gemini-2.0-flash-lite", contents=f"""I encountered the following error while running my Python script: {error} 
+    model="gemini-2.0-flash-lite", config = generation_config, contents=f"""I encountered the following error while running my Python script: {error} 
     Figure out what the solution is and what caused the problem. Keep it concise. Provide the solution in code format with comments on every line to explain it.
     The format should look similar to this:
 
