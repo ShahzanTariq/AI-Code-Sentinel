@@ -1,5 +1,4 @@
-from PySide6.QtWidgets import QApplication, QWidget, QVBoxLayout, QPushButton, QHBoxLayout, QLabel, QLineEdit, QFileDialog, QPlainTextEdit
-from PySide6.QtCore import Signal
+from PySide6.QtWidgets import QWidget, QVBoxLayout, QPushButton, QHBoxLayout, QLabel, QLineEdit, QFileDialog, QPlainTextEdit
 import os
 import re
 
@@ -114,17 +113,17 @@ class MainWindow(QWidget):
             return
 
         
-        self.worker_thread = WorkerThread(script_path, [], mainFile_path) # No script arguments for now
+        self.worker_thread = WorkerThread(script_path, mainFile_path) 
         self.worker_thread.output_signal.connect(self.append_output)  # Connect to append output to the GUI
         self.worker_thread.finished_signal.connect(self.worker_finished)  # Connect to cleanup
         self.worker_thread.start()
         self.error_text.setPlainText("Watcher started.")
         self.browse_button.setEnabled(False) #Stops user from changing folder while watcher is running
+        self.mainFile_button.setEnabled(False)
         self.watch_button.setText("Stop Watching")  # Change button text
 
     # Set up to split texts into corresponding plaintext boxes (error, cause, solution)
     def append_output(self, output, stderr):
-        #self.error_text.appendPlainText(output)
         if output == "Script executed successfully.":
             self.error_text.setPlainText(output) #Using setPlaintext helps clean up the PlainText box in GUI
             self.cause_text.setPlainText("")
@@ -147,12 +146,14 @@ class MainWindow(QWidget):
 
     def stop_watching(self):
         if self.worker_thread is not None and self.worker_thread.isRunning():
-            self.worker_thread.terminate() # Forcefully stop the thread
+            self.worker_thread.quit()
+            self.worker_thread.wait()
             self.worker_thread = None  # Reset the thread object
             self.error_text.setPlainText("Watcher stopped.")
             self.worker_finished()
             self.watch_button.setText("Start Watching")  # Change button text
             self.browse_button.setEnabled(True) # Allows user to browse folders again
+            self.mainFile_button.setEnabled(True)
         else:
             self.error_text.appendPlainText("Watcher is not running.")
 

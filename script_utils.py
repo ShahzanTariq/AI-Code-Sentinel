@@ -11,9 +11,8 @@ api = os.getenv("GOOGLE_API_KEY")
 client = genai.Client(api_key=api)
 
 class ScriptChangeHandler(FileSystemEventHandler):
-    def __init__(self, script_path, *args, mainFile_path = None):
+    def __init__(self, script_path, mainFile_path):
         self.script_path = script_path
-        self.script_args = args
         self.mainFile_path = mainFile_path
         self.last_triggered = 0
         self.debounce_interval = 3
@@ -26,23 +25,23 @@ class ScriptChangeHandler(FileSystemEventHandler):
             if current_time - self.last_triggered > self.debounce_interval:
                 self.last_triggered = current_time
                 print(f"Detected change in {event.src_path}. Re-running script...")
-                error_code, stdout, stderr = run_script_and_capture_error(event.src_path, *self.script_args, self.mainFile_path)
+                error_code, stdout, stderr = run_script_and_capture_error(event.src_path, self.mainFile_path)
                 output = process_output(error_code, stdout, stderr)
                 self.output_signal.emit(output, stderr)  # Emit the output to the GUI
 
 
-def run_script_and_capture_error(script_path, *args, mainFile_path = None):
+def run_script_and_capture_error(script_path, mainFile_path):
     try:
-        if mainFile_path == None:
-            process = subprocess.run(
-                [sys.executable, script_path] + list(args),  # Use sys.executable to ensure the correct Python interpreter
+        if os.path.isfile(mainFile_path):
+                process = subprocess.run(
+                [sys.executable, mainFile_path],  # Use sys.executable to ensure the correct Python interpreter
                 capture_output=True,
                 text=True,  # Capture output as text
                 check=False  # Don't raise an exception on non-zero exit codes
             )
         else:
             process = subprocess.run(
-                [sys.executable, mainFile_path] + list(args),  # Use sys.executable to ensure the correct Python interpreter
+                [sys.executable, script_path],  # Use sys.executable to ensure the correct Python interpreter
                 capture_output=True,
                 text=True,  # Capture output as text
                 check=False  # Don't raise an exception on non-zero exit codes
@@ -55,13 +54,7 @@ def run_script_and_capture_error(script_path, *args, mainFile_path = None):
     
 
 def process_output(error_code, stdout, stderr):
-    print(error_code)
-    # output = "Script Output (stdout):\n"
-    # output += stdout + "\n"
     if error_code != 0:
-        # output += f"Error Code: {error_code}\n"
-        # output += "Script Error (stderr):\n"
-        # output += stderr + "\n"
         solution = ai_help(stderr)
         output = solution.text + "\n"
     else:
