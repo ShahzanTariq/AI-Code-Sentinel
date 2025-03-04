@@ -119,6 +119,7 @@ class MainWindow(QWidget):
         self.worker_thread.start()
         self.error_text.setPlainText("Watcher started.")
         self.browse_button.setEnabled(False) #Stops user from changing folder while watcher is running
+        self.mainFile_button.setEnabled(False)
         self.watch_button.setText("Stop Watching")  # Change button text
 
     # Set up to split texts into corresponding plaintext boxes (error, cause, solution)
@@ -152,6 +153,7 @@ class MainWindow(QWidget):
             self.worker_finished()
             self.watch_button.setText("Start Watching")  # Change button text
             self.browse_button.setEnabled(True) # Allows user to browse folders again
+            self.mainFile_button.setEnabled(True)
         else:
             self.error_text.appendPlainText("Watcher is not running.")
 
