@@ -1,9 +1,5 @@
-import sys
 import os
-import time
-import subprocess
 from watchdog.observers import Observer
-from watchdog.events import FileSystemEventHandler
 from PySide6.QtCore import QThread, Signal
 
 from script_utils import ScriptChangeHandler

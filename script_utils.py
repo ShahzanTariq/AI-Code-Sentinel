@@ -50,19 +50,11 @@ def run_script_and_capture_error(script_path, mainFile_path):
     except FileNotFoundError:
         return -1, "", f"Error: Script not found at '{script_path}'"
     except Exception as e:
-        print(script_path)
-        print(e)
         return -1, "", f"An unexpected error occurred: {e}"
     
 
 def process_output(error_code, stdout, stderr):
-    print(error_code)
-    # output = "Script Output (stdout):\n"
-    # output += stdout + "\n"
     if error_code != 0:
-        # output += f"Error Code: {error_code}\n"
-        # output += "Script Error (stderr):\n"
-        # output += stderr + "\n"
         solution = ai_help(stderr)
         output = solution.text + "\n"
     else:
