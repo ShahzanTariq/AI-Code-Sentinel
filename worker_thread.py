@@ -28,4 +28,3 @@ class WorkerThread(QThread):
             if self.observer:
                 self.observer.stop()
                 self.observer.join()
-            self.finished_signal.emit()  # Signal thread completion

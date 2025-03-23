@@ -103,7 +103,7 @@ class MainWindow(QWidget):
         mainFile_path = self.mainFile_path_edit.text()
 
         if not script_path:
-            self.error_text.appendPlainText("Please select a file first.")
+            self.error_text.appendPlainText("Please select a folder first.")
             return
         if not os.path.exists(script_path):
             self.error_text.appendPlainText(f"Error: {script_path} not found.")
@@ -114,7 +114,7 @@ class MainWindow(QWidget):
         
         self.worker_thread = WorkerThread(script_path, mainFile_path) 
         self.worker_thread.output_signal.connect(self.append_output)  # Connect to append output to the GUI
-        self.worker_thread.finished_signal.connect(self.worker_finished)  # Connect to cleanup
+        self.worker_thread.finished_signal.connect(self.stop_watching)  # Connect to cleanup
         self.worker_thread.start()
         self.error_text.setPlainText("Watcher started.")
         self.browse_button.setEnabled(False) #Stops user from changing folder while watcher is running
@@ -122,13 +122,18 @@ class MainWindow(QWidget):
         self.watch_button.setText("Stop Watching")  # Change button text
 
 
+    def empty_text(self):
+        self.cause_text.setPlainText("")
+        self.solution_text.setPlainText("")
+        self.stderror_text.setPlainText("")
+        self.error_text.setPlainText("")
+    
+
     # Set up to split texts into corresponding plaintext boxes (error, cause, solution)
     def append_output(self, output, stderr):
         if output == "Script executed successfully.":
+            self.empty_text()
             self.error_text.setPlainText(output) #Using setPlaintext helps clean up the PlainText box in GUI
-            self.cause_text.setPlainText("")
-            self.solution_text.setPlainText("")
-            self.stderror_text.setPlainText("")
             return
         
         match = re.search(r"Error:\s*(.+?)\s*Cause:\s*(.+?)\s*Solution:\s*(.+)", output, re.DOTALL)
@@ -142,7 +147,6 @@ class MainWindow(QWidget):
         
         self.error_text.setPlainText(error) #Using setPlaintext helps clean up the PlainText box in GUI
         self.cause_text.setPlainText(cause)
-        print(solution)
         self.solution_text.setPlainText(solution)
         self.stderror_text.setPlainText(stderr)
 
@@ -152,8 +156,10 @@ class MainWindow(QWidget):
             self.worker_thread.quit()
             self.worker_thread.wait()
             self.worker_thread = None  # Reset the thread object
+            self.empty_text()
             self.error_text.setPlainText("Watcher stopped.")
             self.worker_finished()
+            
             self.watch_button.setText("Start Watching")  # Change button text
             self.browse_button.setEnabled(True) # Allows user to browse folders again
             self.mainFile_button.setEnabled(True)
