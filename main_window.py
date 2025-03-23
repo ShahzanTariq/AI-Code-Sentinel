@@ -1,4 +1,5 @@
 from PySide6.QtWidgets import QWidget, QVBoxLayout, QPushButton, QHBoxLayout, QLabel, QLineEdit, QFileDialog, QPlainTextEdit
+from PySide6.QtGui import QIcon
 import os
 import re
 
@@ -9,6 +10,10 @@ class MainWindow(QWidget):
         super().__init__()
         self.setWindowTitle("AI Code Sentinel")
         self.worker_thread = None
+
+        icon_path = "Icon.png"
+        icon = QIcon(str(icon_path))
+        self.setWindowIcon(icon)
 
         layout = QVBoxLayout()
         plainText_layout = QHBoxLayout()
