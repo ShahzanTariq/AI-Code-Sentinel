@@ -37,7 +37,7 @@ pip install -r requirements.txt
 python main.py
 ```
 This will launch the GUI, where you can select a file to monitor and execute.
-![image](https://github.com/user-attachments/assets/97155c0d-3df8-400b-a252-131eeac8c3ca)
+![image](https://github.com/user-attachments/assets/23d7e102-7051-4544-bc89-81309ec71354)
 
 ## Configuration
 ### Adding Your API Key
