@@ -128,6 +128,7 @@ class MainWindow(QWidget):
             self.error_text.setPlainText(output) #Using setPlaintext helps clean up the PlainText box in GUI
             self.cause_text.setPlainText("")
             self.solution_text.setPlainText("")
+            self.stderror_text.setPlainText("")
             return
         
         match = re.search(r"Error:\s*(.+?)\s*Cause:\s*(.+?)\s*Solution:\s*(.+)", output, re.DOTALL)
@@ -136,10 +137,12 @@ class MainWindow(QWidget):
             error = match.group(1).strip()
             cause = match.group(2).strip()
             solution = match.group(3).strip()
+            solution = re.sub(r"```python\s*|\s*```", "", solution)
         else:
             return None  # Return None if the pattern is not found
         self.error_text.setPlainText(error) #Using setPlaintext helps clean up the PlainText box in GUI
         self.cause_text.setPlainText(cause)
+        print(solution)
         self.solution_text.setPlainText(solution)
         self.stderror_text.setPlainText(stderr)
 
