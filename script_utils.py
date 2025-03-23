@@ -17,6 +17,7 @@ class ScriptChangeHandler(FileSystemEventHandler):
         self.last_triggered = 0
         self.debounce_interval = 3
 
+
     def on_modified(self, event):
         if event.is_directory:
             return None
@@ -28,6 +29,7 @@ class ScriptChangeHandler(FileSystemEventHandler):
                 error_code, stdout, stderr = run_script_and_capture_error(event.src_path, self.mainFile_path)
                 output = process_output(error_code, stdout, stderr)
                 self.output_signal.emit(output, stderr)  # Emit the output to the GUI
+
 
 
 def run_script_and_capture_error(script_path, mainFile_path):
@@ -61,7 +63,6 @@ def process_output(error_code, stdout, stderr):
         output = "Script executed successfully."
     return output
 
-    
 
 def ai_help(stderr):
     generation_config = {
