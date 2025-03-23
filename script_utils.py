@@ -65,7 +65,8 @@ def process_output(error_code, stdout, stderr):
 
 def ai_help(stderr):
     generation_config = {
-        "temperature": 0.6
+        "temperature": 0.1,
+        "top_p": 0.5
     }
     error = stderr
     print("\nThe helper is thinking...\n")
