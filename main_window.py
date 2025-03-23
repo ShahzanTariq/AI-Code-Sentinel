@@ -1,5 +1,6 @@
 from PySide6.QtWidgets import QWidget, QVBoxLayout, QPushButton, QHBoxLayout, QLabel, QLineEdit, QFileDialog, QPlainTextEdit
 from PySide6.QtGui import QIcon
+from PySide6.QtCore import Qt, QSize
 from worker_thread import WorkerThread
 import os
 import re 
@@ -9,6 +10,8 @@ class MainWindow(QWidget):
         super().__init__()
         self.setWindowTitle("AI Code Sentinel")
         self.worker_thread = None
+
+        self.setWindowFlag(Qt.WindowStaysOnTopHint, False)
 
         icon_path = "Icon.png"
         icon = QIcon(str(icon_path))
@@ -42,9 +45,17 @@ class MainWindow(QWidget):
         layout.addLayout(fileSelection_layout)
 
         # Watch button (toggleable) 
+        toggle_layout = QHBoxLayout()
         self.watch_button = QPushButton("Start Watching")
         self.watch_button.clicked.connect(self.toggle_watching)  # Connect to toggle function
-        layout.addWidget(self.watch_button)
+        toggle_layout.addWidget(self.watch_button,9)
+
+        # Pin button (toggleable)
+        self.pin_button = QPushButton("Pin Window")
+        self.pin_button.clicked.connect(self.toggle_pin)
+        toggle_layout.addWidget(self.pin_button)
+
+        layout.addLayout(toggle_layout)
         
         # Error Section (Vertical Layout)
         error_layout = QVBoxLayout()
@@ -97,6 +108,16 @@ class MainWindow(QWidget):
         else:
             self.stop_watching() # Call existing stop_watching function
             
+    def toggle_pin(self):
+        if self.windowFlags() & Qt.WindowStaysOnTopHint:
+            self.setWindowFlag(Qt.WindowStaysOnTopHint, False)
+            self.pin_button.setText("Pin Window") 
+        else:
+            self.setWindowFlag(Qt.WindowStaysOnTopHint, True)
+            self.pin_button.setText("Unpin Window") 
+        self.current_size = QSize(self.width(),self.height())
+        self.show()
+        self.resize(self.current_size)
 
     def start_watching(self):
         script_path = self.folder_path_edit.text()
